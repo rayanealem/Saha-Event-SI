@@ -473,7 +473,7 @@ export function SalleDetailClient({ venue, bookings = [] }: { venue: VenueDetail
 
                 {!isAuthenticated ? (
                   <Link
-                    href="/auth"
+                    href="/login"
                     className="btn-primary w-full no-underline"
                     style={{ textAlign: "center" }}
                   >
@@ -534,7 +534,7 @@ export function SalleDetailClient({ venue, bookings = [] }: { venue: VenueDetail
               </Link>
             ) : (
               <Link
-                href="/auth"
+                href="/login"
                 className="btn-primary no-underline"
                 style={{ height: 44 }}
               >

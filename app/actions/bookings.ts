@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from './notifications'
 
 export async function createBooking(data: {
   venue_id: string
@@ -49,9 +50,53 @@ export async function createBooking(data: {
 
   if (error) return { error: error.message }
 
-  // Notification is auto-created by DB trigger: notify_on_reservation_change
+  // Send notification to venue owner
+  const { data: venue } = await supabase
+    .from('venues')
+    .select('owner_id, name')
+    .eq('id', data.venue_id)
+    .single()
+
+  if (venue) {
+    const { data: clientProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const clientName = (clientProfile as any)?.full_name || 'Un client'
+    const formattedDate = new Date(data.start_date + 'T00:00:00').toLocaleDateString('fr-FR', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    })
+
+    await createNotification(
+      (venue as any).owner_id,
+      'booking_request',
+      `${clientName} a réservé "${(venue as any).name}" pour le ${formattedDate}. Montant: ${data.total_price.toLocaleString('fr-DZ')} DA.`,
+      reservation.id
+    )
+
+    // Also notify all admins about new platform bookings
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'ADMIN')
+    
+    if (admins && admins.length > 0) {
+      for (const admin of admins as any[]) {
+        await createNotification(
+          admin.id,
+          'booking_request',
+          `Nouvelle commande : ${clientName} → "${(venue as any).name}" le ${formattedDate}. Montant: ${data.total_price.toLocaleString('fr-DZ')} DA.`,
+          reservation.id
+        )
+      }
+    }
+  }
 
   revalidatePath('/espace-client')
+  revalidatePath('/espace-proprietaire')
+  revalidatePath('/admin')
   return { data: reservation }
 }
 
@@ -74,7 +119,43 @@ export async function updateBookingStatus(id: string, status: 'CONFIRMED' | 'CAN
 
   if (error) return { error: error.message }
 
-  // Notification is auto-created by DB trigger: notify_on_reservation_change
+  // Get reservation details for notification
+  const { data: reservation } = await supabase
+    .from('reservations')
+    .select('client_id, venue_id, start_date, venues(name)')
+    .eq('id', id)
+    .single()
+
+  if (reservation) {
+    const res = reservation as any
+    const venueName = res.venues?.name || 'la salle'
+    const formattedDate = new Date(res.start_date + 'T00:00:00').toLocaleDateString('fr-FR', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    })
+
+    if (status === 'CONFIRMED') {
+      await createNotification(
+        res.client_id,
+        'booking_confirmed',
+        `Votre réservation pour "${venueName}" le ${formattedDate} a été confirmée !`,
+        id
+      )
+    } else if (status === 'CANCELLED') {
+      await createNotification(
+        res.client_id,
+        'booking_refused',
+        `Votre réservation pour "${venueName}" le ${formattedDate} a été refusée. ${reason ? `Motif: ${reason}` : ''}`,
+        id
+      )
+    } else if (status === 'RECEIPT_INVALID') {
+      await createNotification(
+        res.client_id,
+        'booking_refused',
+        `Le reçu CCP pour "${venueName}" le ${formattedDate} a été jugé invalide. Veuillez soumettre un nouveau reçu.`,
+        id
+      )
+    }
+  }
 
   revalidatePath('/espace-proprietaire')
   revalidatePath('/espace-client')

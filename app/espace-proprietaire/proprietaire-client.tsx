@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { updateBookingStatus, toggleBlockedDate } from "@/app/actions/bookings";
+import { getSignedReceiptUrl } from "@/app/actions/documents";
 import { BookingCalendar } from "@/components/venue/booking-calendar";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -24,6 +25,9 @@ import {
   ArrowLeft,
   AlertCircle,
   TrendingUp,
+  FileText,
+  ExternalLink,
+  Image,
 } from "lucide-react";
 
 const VENUE_STATUS_MAP: Record<string, { label: string; badge: string }> = {
@@ -325,6 +329,9 @@ function RequestCard({
   showActions?: boolean;
   onUpdateStatus?: (id: string, status: 'CONFIRMED' | 'CANCELLED') => void;
 }) {
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
+  const [loadingReceipt, setLoadingReceipt] = useState(false);
+
   const formattedDate = request.date
     ? new Date(request.date + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : "—";
@@ -332,6 +339,18 @@ function RequestCard({
   const formattedCreated = request.created_at
     ? new Date(request.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
     : "";
+
+  const handleViewReceipt = async () => {
+    if (receiptUrl) {
+      setReceiptUrl(null);
+      return;
+    }
+    if (!request.ccp_receipt_url) return;
+    setLoadingReceipt(true);
+    const result = await getSignedReceiptUrl(request.ccp_receipt_url);
+    if (result.url) setReceiptUrl(result.url);
+    setLoadingReceipt(false);
+  };
 
   return (
     <div
@@ -356,14 +375,47 @@ function RequestCard({
           <p style={{ color: "var(--bone)", fontSize: 15, fontWeight: 500, margin: "0 0 4px" }}>
             {request.client_name}
           </p>
-          <p style={{ color: "var(--stone)", fontSize: 13, margin: 0 }}>
+          <p style={{ color: "var(--stone)", fontSize: 13, margin: "0 0 4px" }}>
             {request.venue_name} · {formattedDate}
           </p>
+          {request.client_phone && (
+            <p style={{ color: "var(--stone)", fontSize: 12, margin: 0, opacity: 0.7 }}>
+              Tél: {request.client_phone}
+            </p>
+          )}
+          {request.client_message && (
+            <p style={{ color: "var(--stone)", fontSize: 12, margin: "6px 0 0", fontStyle: "italic", opacity: 0.8 }}>
+              "{request.client_message}"
+            </p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-mono" style={{ fontSize: 18, color: "var(--candlelight)", margin: 0 }}>
             {(request.total || 0).toLocaleString("fr-DZ")} DA
           </p>
+          {/* CCP Receipt button */}
+          {request.ccp_receipt_url && (
+            <button
+              onClick={handleViewReceipt}
+              className="btn-ghost"
+              style={{ color: "var(--brass)", height: 30, fontSize: 11, marginTop: 6 }}
+              disabled={loadingReceipt}
+            >
+              {loadingReceipt ? (
+                <span style={{ fontSize: 11 }}>Chargement...</span>
+              ) : (
+                <>
+                  <Image size={12} strokeWidth={1.5} />
+                  {receiptUrl ? 'Masquer' : 'Voir le reçu CCP'}
+                </>
+              )}
+            </button>
+          )}
+          {!request.ccp_receipt_url && (
+            <p style={{ color: "var(--stone)", fontSize: 11, margin: "8px 0 0", opacity: 0.6 }}>
+              Reçu CCP non soumis
+            </p>
+          )}
           {showActions && onUpdateStatus && (
             <div className="flex gap-2 mt-3">
               <button
@@ -386,6 +438,46 @@ function RequestCard({
           )}
         </div>
       </div>
+      {/* Receipt viewer */}
+      {receiptUrl && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: "16px",
+            borderRadius: 4,
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(168,124,62,0.08)",
+            textAlign: "center",
+          }}
+        >
+          <p className="text-caption" style={{ color: "var(--brass)", marginBottom: 12 }}>
+            Reçu CCP soumis par le client
+          </p>
+          {request.ccp_receipt_url?.endsWith('.pdf') ? (
+            <a
+              href={receiptUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost no-underline"
+              style={{ color: "var(--brass)" }}
+            >
+              <ExternalLink size={14} strokeWidth={1.5} />
+              Ouvrir le PDF
+            </a>
+          ) : (
+            <img
+              src={receiptUrl}
+              alt="Reçu CCP"
+              style={{
+                maxWidth: "100%",
+                maxHeight: 400,
+                borderRadius: 4,
+                border: "1px solid rgba(168,124,62,0.1)",
+              }}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

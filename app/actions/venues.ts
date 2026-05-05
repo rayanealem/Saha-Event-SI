@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from './notifications'
 
 export async function fetchVenues(params?: {
   wilaya?: string
@@ -65,7 +66,7 @@ export async function createVenue(formData: FormData) {
     price_per_day: parseInt(formData.get('price_per_day') as string) || 100000,
     deposit_percentage: parseInt(formData.get('deposit_percentage') as string) || 25,
     options: amenities,
-    status: 'PUBLISHED',
+    status: 'PENDING_APPROVAL',
   }
 
   // Optional fields
@@ -84,8 +85,49 @@ export async function createVenue(formData: FormData) {
     return { error: error.message }
   }
 
+  // Upload venue document if provided
+  const docFile = formData.get('venue_document') as File
+  if (docFile && docFile.size > 0) {
+    const fileExt = docFile.name.split('.').pop()
+    const fileName = `venue-doc-${data.id}-${Date.now()}.${fileExt}`
+    const filePath = `${user.id}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('kyc_documents')
+      .upload(filePath, docFile)
+
+    if (!uploadError) {
+      // Insert document record linked to venue
+      await supabase.from('venue_documents').insert({
+        owner_id: user.id,
+        venue_id: data.id,
+        doc_type: 'REGISTRE',
+        url: filePath,
+        status: 'PENDING',
+      })
+    }
+  }
+
+  // Notify admins about the new venue submission
+  const { data: admins } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('role', 'ADMIN')
+  
+  if (admins && admins.length > 0) {
+    for (const admin of admins) {
+      await createNotification(
+        admin.id,
+        'new_document',
+        `Nouvelle salle "${venueData.name}" soumise pour vérification par un propriétaire.`,
+        data.id
+      )
+    }
+  }
+
   revalidatePath('/espace-proprietaire')
   revalidatePath('/parcourir')
+  revalidatePath('/admin')
   return { data }
 }
 

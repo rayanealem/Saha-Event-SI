@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from './notifications'
 
 export async function uploadCCPReceipt(reservationId: string, formData: FormData) {
   const supabase = (await createClient()) as any
@@ -11,8 +12,19 @@ export async function uploadCCPReceipt(reservationId: string, formData: FormData
   const file = formData.get('file') as File
   if (!file) return { error: 'No file provided' }
 
+  // Validate file type
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    return { error: 'Type de fichier non autorisé. Veuillez soumettre un PDF, JPEG ou PNG.' }
+  }
+
+  // Validate file size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: 'Le fichier ne doit pas dépasser 5 Mo.' }
+  }
+
   const fileExt = file.name.split('.').pop()
-  const fileName = `${reservationId}-${Math.random()}.${fileExt}`
+  const fileName = `${reservationId}-${Date.now()}.${fileExt}`
   const filePath = `${user.id}/${fileName}`
 
   const { error: uploadError } = await supabase.storage
@@ -21,12 +33,6 @@ export async function uploadCCPReceipt(reservationId: string, formData: FormData
 
   if (uploadError) return { error: uploadError.message }
 
-  // Get public URL or internal path
-  const { data: { publicUrl } } = supabase.storage.from('ccp_receipts').getPublicUrl(filePath)
-  // Since ccp_receipts is private, publicUrl won't work perfectly if accessed without auth, 
-  // but we can store the filePath and generate signed URLs when reading, or just use filePath.
-  // For simplicity here, we'll store the raw path and use createSignedUrl when fetching.
-
   const { error: updateError } = await supabase
     .from('reservations')
     .update({ ccp_receipt_url: filePath })
@@ -34,7 +40,36 @@ export async function uploadCCPReceipt(reservationId: string, formData: FormData
 
   if (updateError) return { error: updateError.message }
 
+  // Notify venue owner about the receipt upload
+  const { data: reservation } = await supabase
+    .from('reservations')
+    .select('venue_id, start_date, venues(name, owner_id)')
+    .eq('id', reservationId)
+    .single()
+
+  if (reservation) {
+    const res = reservation as any
+    const { data: clientProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const clientName = (clientProfile as any)?.full_name || 'Un client'
+    const venueName = res.venues?.name || 'la salle'
+
+    if (res.venues?.owner_id) {
+      await createNotification(
+        res.venues.owner_id,
+        'new_document',
+        `${clientName} a soumis son reçu CCP pour "${venueName}". Veuillez vérifier le paiement.`,
+        reservationId
+      )
+    }
+  }
+
   revalidatePath('/espace-client')
+  revalidatePath('/espace-proprietaire')
   return { success: true }
 }
 
@@ -47,7 +82,7 @@ export async function uploadKYCDocument(docType: string, formData: FormData) {
   if (!file) return { error: 'No file provided' }
 
   const fileExt = file.name.split('.').pop()
-  const fileName = `${docType}-${Math.random()}.${fileExt}`
+  const fileName = `${docType}-${Date.now()}.${fileExt}`
   const filePath = `${user.id}/${fileName}`
 
   const { error: uploadError } = await supabase.storage
@@ -72,4 +107,18 @@ export async function uploadKYCDocument(docType: string, formData: FormData) {
 
   revalidatePath('/verification')
   return { success: true }
+}
+
+export async function getSignedReceiptUrl(filePath: string) {
+  const supabase = (await createClient()) as any
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { url: null, error: 'Unauthorized' }
+
+  const { data, error } = await supabase.storage
+    .from('ccp_receipts')
+    .createSignedUrl(filePath, 300) // 5 minute expiry
+
+  if (error) return { url: null, error: error.message }
+  return { url: data.signedUrl, error: null }
 }

@@ -15,6 +15,7 @@ import {
   Plus,
   Percent,
   Loader2,
+  FileText,
 } from "lucide-react";
 import { createVenue } from "@/app/actions/venues";
 
@@ -42,6 +43,7 @@ export default function AjouterSallePage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [docFileName, setDocFileName] = useState<string | null>(null);
 
   const toggleAmenity = (a: string) => {
     setSelectedAmenities((prev) =>
@@ -55,6 +57,13 @@ export default function AjouterSallePage() {
 
     const form = e.currentTarget;
     const formData = new FormData(form);
+
+    // Validate document is attached
+    const docFile = formData.get('venue_document') as File;
+    if (!docFile || docFile.size === 0) {
+      setError('Veuillez joindre un document justificatif (registre commercial, licence, etc.)');
+      return;
+    }
     formData.set("amenities", JSON.stringify(selectedAmenities));
 
     startTransition(async () => {
@@ -89,7 +98,7 @@ export default function AjouterSallePage() {
             Salle soumise avec succès
           </h2>
           <p className="text-body" style={{ color: "var(--stone)", textAlign: "center", maxWidth: 380 }}>
-            Votre salle a été publiée et est maintenant visible sur la plateforme.
+            Votre salle a été soumise pour vérification. Un administrateur l'examinera sous 24-48h avant publication.
           </p>
           <Link href="/espace-proprietaire" className="btn-primary no-underline mt-8">
             Retour à mon espace
@@ -284,13 +293,73 @@ export default function AjouterSallePage() {
             </div>
           </div>
 
+          {/* Venue Document Upload */}
+          <div>
+            <label className="text-label mb-3 block" style={{ color: "var(--stone)" }}>
+              <FileText size={12} strokeWidth={1.5} className="inline mr-1" />
+              Document justificatif (Registre commercial, licence, etc.) *
+            </label>
+            <div
+              style={{
+                padding: "28px 20px",
+                borderRadius: 6,
+                border: "2px dashed rgba(168,124,62,0.2)",
+                background: "rgba(168,124,62,0.02)",
+                textAlign: "center",
+                position: "relative",
+              }}
+            >
+              <input
+                type="file"
+                name="venue_document"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  setDocFileName(f ? f.name : null);
+                }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  opacity: 0,
+                  cursor: "pointer",
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+              {docFileName ? (
+                <>
+                  <CheckCircle size={24} strokeWidth={1.5} style={{ color: "var(--malachite)", margin: "0 auto 10px" }} />
+                  <p className="text-caption" style={{ color: "var(--bone)", margin: "0 0 4px", fontWeight: 600 }}>
+                    {docFileName}
+                  </p>
+                  <p style={{ color: "var(--stone)", fontSize: 11, margin: 0, opacity: 0.6 }}>
+                    Cliquez pour changer de fichier
+                  </p>
+                </>
+              ) : (
+                <>
+                  <FileText size={24} strokeWidth={1.5} style={{ color: "var(--brass)", margin: "0 auto 10px" }} />
+                  <p className="text-caption" style={{ color: "var(--stone)", margin: "0 0 4px" }}>
+                    Déposez votre document ici ou <span style={{ color: "var(--brass)", textDecoration: "underline" }}>parcourir</span>
+                  </p>
+                  <p style={{ color: "var(--stone)", fontSize: 11, margin: 0, opacity: 0.6 }}>
+                    PDF, JPEG ou PNG · Max 5 Mo
+                  </p>
+                </>
+              )}
+            </div>
+            <p style={{ color: "var(--stone)", fontSize: 11, marginTop: 6, opacity: 0.6 }}>
+              Ce document sera examiné par un administrateur pour valider votre salle.
+            </p>
+          </div>
+
           {/* Divider */}
           <hr style={{ border: "none", borderTop: "1px solid rgba(168,124,62,0.1)", margin: "8px 0" }} />
 
           {/* Submit */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <p className="text-caption" style={{ color: "var(--stone)", margin: 0, maxWidth: 300 }}>
-              Votre salle sera publiée directement sur la plateforme.
+              Votre salle sera soumise à vérification avant publication sur la plateforme.
             </p>
             <button
               type="submit"
@@ -301,12 +370,12 @@ export default function AjouterSallePage() {
               {isPending ? (
                 <>
                   <Loader2 size={14} strokeWidth={2} className="animate-spin" />
-                  Publication...
+                  Envoi en cours...
                 </>
               ) : (
                 <>
                   <Plus size={14} strokeWidth={2} />
-                  Publier la salle
+                  Soumettre la salle
                 </>
               )}
             </button>

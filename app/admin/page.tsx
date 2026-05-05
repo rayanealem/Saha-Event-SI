@@ -36,8 +36,14 @@ export default async function AdminPage() {
   const { data: pendingVenues } = await supabase
     .from("venues")
     .select("id, name, wilaya, capacity_max, price_per_day, status, created_at, owner_id, profiles:owner_id(full_name)")
-    .eq("status", "DRAFT")
+    .eq("status", "PENDING_APPROVAL")
     .order("created_at", { ascending: true });
+
+  // Fetch ALL reservations for global order tracker (admin-only)
+  const { data: allReservations } = await supabase
+    .from("reservations")
+    .select("id, reference_code, venue_id, client_id, start_date, end_date, total_price, deposit_amount, status, created_at, venues:venue_id(name), profiles:client_id(full_name, phone)")
+    .order("created_at", { ascending: false });
 
   // Stats
   const { count: totalOwners } = await supabase
@@ -68,6 +74,12 @@ export default async function AdminPage() {
       pendingVenues={(pendingVenues || []).map((v: any) => ({
         ...v,
         owner_name: v.profiles?.full_name || "Inconnu",
+      }))}
+      allOrders={(allReservations || []).map((r: any) => ({
+        ...r,
+        venue_name: r.venues?.name || "—",
+        client_name: r.profiles?.full_name || "Inconnu",
+        client_phone: r.profiles?.phone || "—",
       }))}
     />
   );

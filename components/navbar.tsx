@@ -143,6 +143,14 @@ export function Navbar() {
     return user?.email?.[0]?.toUpperCase() || "U";
   };
 
+  // Quick-access button config based on role
+  const getQuickAction = () => {
+    if (!user) return null;
+    if (user.role === "OWNER") return { label: "Mes salles", href: "/espace-proprietaire", icon: <Building2 size={14} strokeWidth={1.5} /> };
+    if (user.role === "ADMIN") return { label: "Panel Admin", href: "/admin", icon: <Shield size={14} strokeWidth={1.5} /> };
+    return { label: "Mes réservations", href: "/espace-client", icon: <CalendarDays size={14} strokeWidth={1.5} /> };
+  };
+
   // Build contextual menu items based on role
   const getUserMenuItems = () => {
     if (!user) return [];
@@ -190,6 +198,20 @@ export function Navbar() {
         },
       );
     }
+
+    // Notifications — all roles
+    items.push({
+      label: "Notifications",
+      href: "/notifications",
+      icon: <Bell size={14} strokeWidth={1.5} style={{ color: "var(--brass)" }} />,
+    });
+
+    // Settings for all roles
+    items.push({
+      label: "Paramètres",
+      href: getDashboardLink(),
+      icon: <Settings size={14} strokeWidth={1.5} style={{ color: "var(--brass)" }} />,
+    });
 
     return items;
   };
@@ -260,6 +282,42 @@ export function Navbar() {
               <div style={{ width: 80, height: 40 }} />
             ) : user ? (
               <>
+                {/* Role-based quick-access button */}
+                {(() => {
+                  const qa = getQuickAction();
+                  if (!qa) return null;
+                  return (
+                    <Link
+                      href={qa.href}
+                      className="no-underline flex items-center gap-2"
+                      style={{
+                        height: 36,
+                        padding: "0 14px",
+                        borderRadius: 6,
+                        border: "1px solid rgba(168,124,62,0.25)",
+                        background: "rgba(168,124,62,0.06)",
+                        color: "var(--brass)",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        letterSpacing: "0.03em",
+                        transition: "all 0.2s ease",
+                        whiteSpace: "nowrap",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(168,124,62,0.12)";
+                        e.currentTarget.style.borderColor = "rgba(168,124,62,0.4)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(168,124,62,0.06)";
+                        e.currentTarget.style.borderColor = "rgba(168,124,62,0.25)";
+                      }}
+                    >
+                      {qa.icon}
+                      {qa.label}
+                    </Link>
+                  );
+                })()}
+
                 {/* Notification Bell */}
                 <NotificationsDropdown />
 
@@ -382,10 +440,10 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/auth" className="btn-secondary no-underline" style={{ height: 40, fontSize: 12 }}>
+                <Link href="/login" className="btn-secondary no-underline" style={{ height: 40, fontSize: 12 }}>
                   Connexion
                 </Link>
-                <Link href="/auth?mode=register" className="btn-primary no-underline" style={{ height: 40, fontSize: 12 }}>
+                <Link href="/signup" className="btn-primary no-underline" style={{ height: 40, fontSize: 12 }}>
                   Inscription
                 </Link>
               </>
@@ -509,14 +567,14 @@ export function Navbar() {
             ) : (
               <>
                 <Link
-                  href="/auth"
+                  href="/login"
                   onClick={() => setMobileOpen(false)}
                   className="btn-secondary no-underline"
                 >
                   Connexion
                 </Link>
                 <Link
-                  href="/auth?mode=register"
+                  href="/signup"
                   onClick={() => setMobileOpen(false)}
                   className="btn-primary no-underline"
                 >

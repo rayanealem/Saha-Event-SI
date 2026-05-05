@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, X, Check, Calendar, FileText, AlertTriangle } from "lucide-react";
+import { Bell, X, Check, Calendar, FileText } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -89,16 +89,21 @@ export function NotificationsDropdown() {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case "BOOKING_CONFIRMED":
+      case "booking_confirmed":
         return <Check size={14} style={{ color: "#4CAF50" }} />;
-      case "BOOKING_CANCELLED":
+      case "booking_refused":
+      case "booking_cancelled":
         return <X size={14} style={{ color: "var(--pomegranate)" }} />;
-      case "NEW_BOOKING":
+      case "booking_request":
         return <Calendar size={14} style={{ color: "var(--brass)" }} />;
-      case "RECEIPT_UPLOADED":
+      case "new_document":
         return <FileText size={14} style={{ color: "var(--brass)" }} />;
+      case "account_approved":
+        return <Check size={14} style={{ color: "#4CAF50" }} />;
+      case "account_refused":
+        return <X size={14} style={{ color: "var(--pomegranate)" }} />;
       default:
-        return <AlertTriangle size={14} style={{ color: "var(--stone)" }} />;
+        return <Bell size={14} style={{ color: "var(--stone)" }} />;
     }
   };
 
@@ -203,7 +208,7 @@ export function NotificationsDropdown() {
               </p>
             </div>
           ) : (
-            notifications.map((n) => (
+             notifications.map((n) => (
               <div
                 key={n.id}
                 onClick={() => markAsRead(n.id)}
@@ -289,6 +294,27 @@ export function NotificationsDropdown() {
               </div>
             ))
           )}
+
+          {/* Footer — See all link */}
+          <Link
+            href="/notifications"
+            onClick={() => setOpen(false)}
+            style={{
+              display: "block",
+              padding: "12px 16px",
+              textAlign: "center",
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--brass)",
+              borderTop: "1px solid rgba(168,124,62,0.1)",
+              textDecoration: "none",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(168,124,62,0.06)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            Voir toutes les notifications
+          </Link>
         </div>
       )}
     </div>

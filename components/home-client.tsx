@@ -466,7 +466,7 @@ export function HomeClient({ venues }: { venues: FeaturedVenue[] }) {
                 ))}
               </div>
 
-              <Link href="/auth" className="btn-primary no-underline fade-up">
+              <Link href="/login" className="btn-primary no-underline fade-up">
                 Publier ma salle
                 <ArrowRight size={16} strokeWidth={1.5} />
               </Link>
