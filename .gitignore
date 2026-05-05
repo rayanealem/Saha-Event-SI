@@ -1,0 +1,10 @@
+.env*
+.next/*
+node_modules/*
+temp.txt
+.impeccable.md
+.agents/*
+scripts/*
+.claude
+.agent/*
+hash.js

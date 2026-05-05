@@ -1,0 +1,538 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════
+   SAHA·EVENT — EDITORIAL STILLNESS DESIGN SYSTEM
+   ═══════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* ── Color Palette ── */
+    --obsidian: #0E0C09;
+    --alabaster: #F0EAE0;
+    --brass: #A87C3E;
+    --candlelight: #D4B483;
+    --bone: #E8DFD0;
+    --pomegranate: #8B2E20;
+    --malachite: #2E5240;
+    --stone: #6B5B47;
+    --veil: rgba(14, 12, 9, 0.6);
+
+    /* ── Z-Index Layers ── */
+    --z-base: 0;
+    --z-content: 10;
+    --z-card: 20;
+    --z-sticky: 30;
+    --z-navbar: 40;
+    --z-overlay: 50;
+    --z-modal: 60;
+    --z-toast: 70;
+
+    /* ── shadcn/ui token mapping ── */
+    --background: 14 11% 4%;
+    --foreground: 30 15% 85%;
+
+    --card: 14 11% 4%;
+    --card-foreground: 30 15% 85%;
+
+    --popover: 14 11% 4%;
+    --popover-foreground: 30 15% 85%;
+
+    --primary: 32 47% 45%;
+    --primary-foreground: 33 25% 90%;
+
+    --secondary: 33 25% 90%;
+    --secondary-foreground: 14 11% 4%;
+
+    --muted: 14 11% 15%;
+    --muted-foreground: 33 30% 67%;
+
+    --accent: 32 47% 45%;
+    --accent-foreground: 14 11% 4%;
+
+    --destructive: 8 63% 34%;
+    --destructive-foreground: 33 25% 90%;
+
+    --border: 32 47% 45% / 0.2;
+    --input: 32 47% 45% / 0.2;
+    --ring: 32 47% 45%;
+
+    --radius: 4px;
+  }
+
+  /* ── Base element styles ── */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: var(--obsidian);
+    color: var(--bone);
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Typography ── */
+  h1 {
+    font-family: var(--font-bodoni), serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(48px, 6vw, 80px);
+    line-height: 1.05;
+  }
+
+  h2 {
+    font-family: var(--font-bodoni), serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(32px, 4vw, 52px);
+    line-height: 1.15;
+  }
+
+  h3 {
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  /* ── Focus accessibility ── */
+  *:focus-visible {
+    outline: 2px solid var(--brass);
+    outline-offset: 2px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--obsidian);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(168, 124, 62, 0.3);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 124, 62, 0.5);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   COMPONENT CLASSES
+   ═══════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ── Layout ── */
+  .container-saha {
+    @apply mx-auto w-full;
+    max-width: 1200px;
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+
+  @media (max-width: 768px) {
+    .container-saha {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
+
+  /* ── Section padding ── */
+  .section-pad {
+    padding-top: 140px;
+    padding-bottom: 140px;
+  }
+
+  @media (max-width: 768px) {
+    .section-pad {
+      padding-top: 80px;
+      padding-bottom: 80px;
+    }
+  }
+
+  /* ── Section backgrounds ── */
+  .section-obsidian {
+    background-color: var(--obsidian);
+    color: var(--bone);
+  }
+
+  .section-alabaster {
+    background-color: var(--alabaster);
+    color: var(--obsidian);
+  }
+
+  /* ── Typography utilities ── */
+  .text-body {
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.8;
+  }
+
+  .text-caption {
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .text-label {
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .text-mono {
+    font-family: var(--font-dm-mono), monospace;
+    font-weight: 400;
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--brass);
+    color: var(--bone);
+    padding: 0 28px;
+    height: 48px;
+    border: none;
+    border-radius: 24px;
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background-color: #8B6530;
+  }
+  .btn-primary:active {
+    background-color: #704F22;
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: transparent;
+    color: var(--brass);
+    padding: 0 28px;
+    height: 48px;
+    border: 1.5px solid var(--brass);
+    border-radius: 24px;
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+    white-space: nowrap;
+  }
+  .btn-secondary:hover {
+    background-color: rgba(168, 124, 62, 0.08);
+  }
+  .btn-secondary:active {
+    background-color: rgba(168, 124, 62, 0.15);
+    border-color: var(--candlelight);
+    transform: scale(0.97);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--candlelight);
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+  .btn-ghost:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Cards ── */
+  .card-saha {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(168, 124, 62, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(14, 12, 9, 0.08);
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .card-saha:hover {
+    box-shadow: 0 12px 32px rgba(14, 12, 9, 0.16);
+    transform: translateY(-4px);
+  }
+
+  .section-alabaster .card-saha {
+    background: white;
+  }
+
+  /* ── Inputs ── */
+  .input-saha {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid rgba(14, 12, 9, 0.2);
+    padding: 12px 0;
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    color: inherit;
+    transition: border-color 0.2s ease;
+  }
+  .input-saha:focus {
+    outline: none;
+    border-bottom-color: var(--brass);
+  }
+  .input-saha::placeholder {
+    color: var(--stone);
+    opacity: 0.6;
+  }
+
+  /* Dark section inputs */
+  .section-obsidian .input-saha,
+  .input-saha[style*="color: var(--bone)"] {
+    border-bottom-color: rgba(232, 223, 208, 0.2);
+    color: var(--bone);
+  }
+  .section-obsidian .input-saha:focus {
+    border-bottom-color: var(--brass);
+  }
+  .section-obsidian .input-saha::placeholder {
+    color: var(--stone);
+  }
+
+  /* ── Dark background input (for auth, standalone dark contexts) ── */
+  .input-dark {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid rgba(232, 223, 208, 0.15);
+    padding: 12px 0;
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    color: var(--bone);
+    transition: border-color 0.25s ease;
+  }
+  .input-dark:focus {
+    outline: none;
+    border-bottom-color: var(--brass);
+  }
+  .input-dark::placeholder {
+    color: var(--stone);
+    opacity: 0.5;
+  }
+  .input-dark:-webkit-autofill,
+  .input-dark:-webkit-autofill:hover,
+  .input-dark:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--obsidian) inset !important;
+    -webkit-text-fill-color: var(--bone) !important;
+    border-bottom-color: rgba(232, 223, 208, 0.15);
+    caret-color: var(--bone);
+  }
+
+  /* ── Select inputs ── */
+  .section-obsidian select.input-saha {
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236B5B47' stroke-width='1.5'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0 center;
+    padding-right: 20px;
+  }
+
+  /* ── Textarea ── */
+  .section-obsidian textarea.input-saha {
+    border: 1.5px solid rgba(232, 223, 208, 0.15);
+    border-radius: 4px;
+    padding: 12px 16px;
+  }
+  .section-obsidian textarea.input-saha:focus {
+    border-color: var(--brass);
+  }
+
+  /* ── Link utility ── */
+  .no-underline {
+    text-decoration: none !important;
+  }
+
+  /* ── Footer links (CSS-only hover) ── */
+  .footer-link {
+    color: var(--stone);
+    font-family: var(--font-manrope), sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    transition: color 0.2s ease;
+  }
+  .footer-link:hover {
+    color: var(--brass);
+  }
+
+  .footer-social-link {
+    color: var(--stone);
+    transition: color 0.2s ease;
+    display: inline-flex;
+  }
+  .footer-social-link:hover {
+    color: var(--brass);
+  }
+
+  /* ── Nav link hover (CSS-only) ── */
+  .nav-link-hover {
+    color: var(--bone);
+    transition: color 0.2s ease;
+  }
+  .nav-link-hover:hover {
+    color: var(--brass);
+  }
+
+  /* ── Shimmer skeleton ── */
+  .skeleton-saha {
+    background: linear-gradient(
+      90deg,
+      rgba(168, 124, 62, 0.06) 0%,
+      rgba(168, 124, 62, 0.15) 50%,
+      rgba(168, 124, 62, 0.06) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+  }
+
+  /* ── Error state ── */
+  .error-card {
+    border-left: 3px solid var(--pomegranate);
+    padding: 16px 20px;
+    border-radius: 0 4px 4px 0;
+    background: rgba(139, 46, 32, 0.06);
+  }
+  .error-card p {
+    font-family: var(--font-manrope), sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--pomegranate);
+    margin: 0;
+  }
+
+  /* ── Section divider ── */
+  .divider-brass {
+    border: none;
+    border-top: 1px solid rgba(168, 124, 62, 0.3);
+  }
+
+  /* ── Status badges ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-family: var(--font-manrope), sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .badge-brass {
+    background: rgba(168, 124, 62, 0.15);
+    color: var(--brass);
+  }
+  .badge-malachite {
+    background: rgba(46, 82, 64, 0.15);
+    color: var(--malachite);
+  }
+  .badge-pomegranate {
+    background: rgba(139, 46, 32, 0.1);
+    color: var(--pomegranate);
+  }
+  .badge-stone {
+    background: rgba(107, 91, 71, 0.1);
+    color: var(--stone);
+  }
+
+  /* ── Reservation card hover ── */
+  .reservation-card {
+    padding: 28px 32px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(168, 124, 62, 0.1);
+    transition: border-color 0.2s ease;
+  }
+  .reservation-card:hover {
+    border-color: rgba(168, 124, 62, 0.25);
+  }
+
+  /* ── Venue card hover (CSS-only, no JS handlers) ── */
+  .venue-card-hover {
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .venue-card-hover:hover {
+    box-shadow: 0 16px 48px rgba(14, 12, 9, 0.12);
+    transform: translateY(-4px);
+  }
+  .venue-card-hover:active {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(14, 12, 9, 0.1);
+  }
+
+  /* ── Fade-up animation ── */
+  .fade-up {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+  .fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   NOISE TEXTURE OVERLAY — Static PNG, 3% opacity
+   ═══════════════════════════════════════════════════════ */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyAQMAAAAk8RryAAAABlBMVEX///8AAABVwtN+AAAAAnRSTlMzMzrXn/oAAABKSURBVCjPjcuhCQAxEATAl0G8l6B/xag1q8E5sLgG8hERERERERERERERERERERERERERERERERERERERERERERERERERERH54wZtWQK9Z4dD9AAAAABJRU5ErkJggg==");
+  background-repeat: repeat;
+  background-size: 64px 64px;
+  opacity: 0.03;
+}
