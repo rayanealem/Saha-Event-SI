@@ -1,4 +1,4 @@
-# Saha Event 🎉
+# Saha-Event-Saha 🎉
 
 A modern, full-stack event management platform built with Next.js 15, Supabase, and a clean component-driven UI.
 
@@ -41,16 +41,14 @@ A modern, full-stack event management platform built with Next.js 15, Supabase, 
 
 ### 1. Clone the Repository
 
-    git clone https://github.com/your-username/saha-event.git
-    cd saha-event
+    git clone https://github.com/your-username/saha-event-saha.git
+    cd saha-event-saha
 
 ### 2. Install Dependencies
 
     npm install
 
 ### 3. Configure Environment Variables
-
-Copy the example environment file and fill in your Supabase credentials:
 
     cp .env.local.example .env.local
 
@@ -59,7 +57,7 @@ Then edit `.env.local`:
     NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
     NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-> You can find these values in your Supabase project under **Settings → API**.
+> Find these in your Supabase project under **Settings → API**.
 
 ### 4. Run the Development Server
 
@@ -71,7 +69,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 📁 Project Structure
 
-    saha-event/
+    saha-event-saha/
     ├── app/                  # Next.js App Router pages & layouts
     ├── components/           # Reusable UI components
     │   └── ui/               # shadcn/ui base components
@@ -102,8 +100,6 @@ Authentication is handled by **Supabase Auth** with server-side session manageme
 ---
 
 ## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
