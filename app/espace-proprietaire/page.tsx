@@ -18,7 +18,8 @@ export default async function EspaceProprietairePage() {
     .eq("id", user.id)
     .single();
 
-  if ((profile as any)?.role !== "OWNER" && (profile as any)?.role !== "ADMIN") {
+  const userRole = (profile as any)?.role || user.user_metadata?.role;
+  if (userRole !== "OWNER" && userRole !== "ADMIN") {
     redirect("/espace-client");
   }
 

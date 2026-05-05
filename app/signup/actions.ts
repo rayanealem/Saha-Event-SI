@@ -4,54 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
-export async function login(formData: FormData, redirectTo?: string) {
-  const supabase = (await createClient()) as any
-
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-
-  if (!email || !password) {
-    return { error: 'Veuillez remplir tous les champs.' }
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (error) {
-    // Translate common Supabase errors to French
-    const msg = error.message?.toLowerCase() || ''
-    if (msg.includes('invalid login credentials')) {
-      return { error: 'Email ou mot de passe incorrect.' }
-    }
-    if (msg.includes('email not confirmed')) {
-      return { error: 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.' }
-    }
-    if (msg.includes('too many requests')) {
-      return { error: 'Trop de tentatives. Veuillez réessayer dans quelques minutes.' }
-    }
-    return { error: error.message }
-  }
-
-  // If a specific redirect was requested (e.g., from reservation flow), use it
-  if (redirectTo) {
-    revalidatePath('/', 'layout')
-    redirect(redirectTo)
-  }
-
-  // Fetch user role for proper redirect
-  const { data: { user } } = await supabase.auth.getUser()
-  let redirectUrl = '/parcourir'
-
-  if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role === 'OWNER') redirectUrl = '/espace-proprietaire'
-    else if (profile?.role === 'ADMIN') redirectUrl = '/admin'
-    else redirectUrl = '/espace-client'
-  }
-
-  revalidatePath('/', 'layout')
-  redirect(redirectUrl)
-}
-
 export async function signup(formData: FormData) {
   const supabase = (await createClient()) as any
 
@@ -92,28 +44,31 @@ export async function signup(formData: FormData) {
     if (msg.includes('rate limit') || msg.includes('too many requests')) {
       return { error: 'Trop de tentatives. Veuillez réessayer dans quelques minutes.' }
     }
+    if (msg.includes('database error') || msg.includes('schema')) {
+      return { error: 'Erreur temporaire du serveur. Veuillez réessayer.' }
+    }
     return { error: error.message }
   }
 
-  // Try to sign in the user immediately since we might have auto-confirmed them via trigger
-  const { error: signInError } = await supabase.auth.signInWithPassword({
+  // Try to sign in the user immediately since we auto-confirm via trigger
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email,
     password
   })
 
-  if (!signInError) {
-    let redirectUrl = '/parcourir'
+  if (!signInError && signInData?.user) {
+    // Use the role from form data directly (most reliable source at signup time)
+    let redirectUrl = '/espace-client'
     if (role === 'OWNER') redirectUrl = '/espace-proprietaire'
     else if (role === 'ADMIN') redirectUrl = '/admin'
-    else redirectUrl = '/espace-client'
 
     revalidatePath('/', 'layout')
     redirect(redirectUrl)
   }
 
-  // Fallback if sign in failed (e.g. if email confirmation is actually required and trigger didn't work)
+  // Fallback if sign in failed
   return {
     success: true,
-    message: 'Compte créé avec succès ! Si vous n\'êtes pas redirigé, veuillez vérifier votre email ou essayer de vous connecter.'
+    message: 'Compte créé avec succès ! Si vous n\'êtes pas redirigé, veuillez essayer de vous connecter.'
   }
 }

@@ -19,17 +19,27 @@ export default async function EspaceClientPage() {
     .eq("id", user.id)
     .single();
 
-  // Fetch real reservations with venue names
+  // Build profile with user_metadata fallback
+  const meta = user.user_metadata || {};
+  const finalProfile = {
+    full_name: profile?.full_name || meta.full_name || "",
+    email: profile?.email || user.email || "",
+    phone: profile?.phone || meta.phone || "",
+    role: profile?.role || meta.role || "CLIENT",
+    kyc_status: profile?.kyc_status || "PENDING",
+  };
+
+  // Fetch real reservations with venue names and CCP receipt URL
   const { data: reservations } = await supabase
     .from("reservations")
-    .select("id, start_date, end_date, total_price, deposit_amount, status, reference_code, created_at, venues(name, wilaya)")
+    .select("id, start_date, end_date, total_price, deposit_amount, status, reference_code, created_at, ccp_receipt_url, venues(name, wilaya)")
     .eq("client_id", user.id)
     .neq("status", "BLOCKED")
     .order("created_at", { ascending: false });
 
   return (
     <EspaceClientContent
-      profile={profile || { full_name: "", email: user.email, phone: "", role: "CLIENT", kyc_status: "PENDING" }}
+      profile={finalProfile}
       reservations={reservations || []}
     />
   );

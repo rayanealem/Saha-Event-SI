@@ -14,7 +14,7 @@ export async function login(formData: FormData, redirectTo?: string) {
     return { error: 'Veuillez remplir tous les champs.' }
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
     // Translate common Supabase errors to French
@@ -28,6 +28,9 @@ export async function login(formData: FormData, redirectTo?: string) {
     if (msg.includes('too many requests')) {
       return { error: 'Trop de tentatives. Veuillez réessayer dans quelques minutes.' }
     }
+    if (msg.includes('database error') || msg.includes('schema')) {
+      return { error: 'Erreur temporaire du serveur. Veuillez réessayer.' }
+    }
     return { error: error.message }
   }
 
@@ -37,15 +40,32 @@ export async function login(formData: FormData, redirectTo?: string) {
     redirect(redirectTo)
   }
 
-  // Fetch user role for proper redirect
-  const { data: { user } } = await supabase.auth.getUser()
-  let redirectUrl = '/parcourir'
-  
-  if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role === 'OWNER') redirectUrl = '/espace-proprietaire'
-    else if (profile?.role === 'ADMIN') redirectUrl = '/admin'
-    else redirectUrl = '/espace-client'
+  // Use the session user data directly from signIn response to determine role
+  // This avoids making a second DB query in the same serverless request
+  // where the auth cookie may not yet be propagated
+  let redirectUrl = '/espace-client'
+
+  if (data?.user) {
+    // First try user_metadata (faster, no DB query)
+    const metaRole = data.user.user_metadata?.role
+    if (metaRole === 'OWNER') {
+      redirectUrl = '/espace-proprietaire'
+    } else if (metaRole === 'ADMIN') {
+      redirectUrl = '/admin'
+    } else {
+      // Fallback: try querying profiles with a fresh client
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single()
+        if (profile?.role === 'OWNER') redirectUrl = '/espace-proprietaire'
+        else if (profile?.role === 'ADMIN') redirectUrl = '/admin'
+      } catch {
+        // Profile query failed — use default redirect
+      }
+    }
   }
 
   revalidatePath('/', 'layout')

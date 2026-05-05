@@ -21,7 +21,8 @@ export default async function AdminPage() {
     .eq("id", user.id)
     .single();
 
-  if ((profile as any)?.role !== "ADMIN") {
+  const userRole = (profile as any)?.role || user.user_metadata?.role;
+  if (userRole !== "ADMIN") {
     redirect("/espace-client");
   }
 

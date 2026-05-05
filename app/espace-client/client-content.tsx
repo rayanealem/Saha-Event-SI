@@ -11,7 +11,11 @@ import {
   ArrowRight,
   MapPin,
   AlertCircle,
+  FileText,
+  Download,
+  Loader2,
 } from "lucide-react";
+import { getSignedReceiptUrl } from "@/app/actions/documents";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; icon: any }> = {
   PENDING: { label: "En attente", badge: "badge-brass", icon: Clock },
@@ -32,6 +36,7 @@ interface Reservation {
   status: string;
   reference_code: string;
   created_at: string;
+  ccp_receipt_url: string | null;
   venues: { name: string; wilaya: string } | null;
 }
 
@@ -51,6 +56,23 @@ export function EspaceClientContent({
   reservations: Reservation[];
 }) {
   const [tab, setTab] = useState<Tab>("reservations");
+  const [loadingReceipt, setLoadingReceipt] = useState<string | null>(null);
+
+  const handleViewReceipt = async (filePath: string, reservationId: string) => {
+    setLoadingReceipt(reservationId);
+    try {
+      const result = await getSignedReceiptUrl(filePath);
+      if (result.url) {
+        window.open(result.url, '_blank');
+      } else {
+        alert(result.error || 'Impossible de charger le reçu.');
+      }
+    } catch {
+      alert('Erreur lors du chargement du reçu.');
+    } finally {
+      setLoadingReceipt(null);
+    }
+  };
 
   return (
     <section className="section-obsidian" style={{ paddingTop: 68, minHeight: "100vh" }}>
@@ -204,6 +226,35 @@ export function EspaceClientContent({
                           >
                             Acompte: {res.deposit_amount?.toLocaleString("fr-DZ")} DA
                           </p>
+
+                          {/* CCP Receipt button */}
+                          {res.ccp_receipt_url && (
+                            <button
+                              onClick={() => handleViewReceipt(res.ccp_receipt_url!, res.id)}
+                              disabled={loadingReceipt === res.id}
+                              className="flex items-center gap-2 no-underline mt-3"
+                              style={{
+                                padding: "6px 14px",
+                                borderRadius: 8,
+                                background: "rgba(168,124,62,0.08)",
+                                border: "1px solid rgba(168,124,62,0.2)",
+                                color: "var(--brass)",
+                                fontSize: 12,
+                                fontWeight: 500,
+                                cursor: loadingReceipt === res.id ? "wait" : "pointer",
+                                transition: "all 0.2s ease",
+                                opacity: loadingReceipt === res.id ? 0.6 : 1,
+                              }}
+                            >
+                              {loadingReceipt === res.id ? (
+                                <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
+                              ) : (
+                                <FileText size={12} strokeWidth={1.5} />
+                              )}
+                              Voir le reçu CCP
+                              <Download size={10} strokeWidth={1.5} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

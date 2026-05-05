@@ -58,17 +58,23 @@ export function Navbar() {
     const fetchUser = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
+        // Try profile DB first
         const { data: profile } = await supabase
           .from("profiles")
           .select("full_name, role")
           .eq("id", authUser.id)
           .single();
 
+        // Fallback to user_metadata if profile is empty/missing
+        const meta = authUser.user_metadata || {};
+        const fullName = (profile as any)?.full_name || meta.full_name || null;
+        const role = (profile as any)?.role || meta.role || "CLIENT";
+
         setUser({
           id: authUser.id,
           email: authUser.email || "",
-          full_name: (profile as any)?.full_name || null,
-          role: (profile as any)?.role || "CLIENT",
+          full_name: fullName,
+          role: role,
         });
       } else {
         setUser(null);
@@ -78,17 +84,25 @@ export function Navbar() {
 
     fetchUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         fetchUser();
+        // Force server components to re-render with new auth data
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          router.refresh();
+        }
       } else {
         setUser(null);
         setLoading(false);
+        if (event === 'SIGNED_OUT') {
+          router.refresh();
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Close user menu on outside click
   useEffect(() => {
