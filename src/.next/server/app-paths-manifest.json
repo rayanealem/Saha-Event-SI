@@ -1,0 +1,17 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/admin/salles/page": "app/admin/salles/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/admin/users/page": "app/admin/users/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/reservations/page": "app/dashboard/reservations/page.js",
+  "/owner/reservations/page": "app/owner/reservations/page.js",
+  "/owner/dashboard/page": "app/owner/dashboard/page.js",
+  "/owner/salles/page": "app/owner/salles/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/page": "app/page.js",
+  "/reserve/[id]/page": "app/reserve/[id]/page.js",
+  "/halls/[id]/page": "app/halls/[id]/page.js",
+  "/halls/page": "app/halls/page.js"
+}
