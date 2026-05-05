@@ -73,7 +73,7 @@ async function main() {
     price_per_day: 100000,
     deposit_percentage: 33,
     options: { parking: true, clim: true },
-    status: 'ACTIVE',
+    status: 'PUBLISHED',
     ccp_name: 'Test Owner',
     ccp_number: '123456 78',
     ccp_key: '90'
@@ -88,11 +88,20 @@ async function main() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     
+    const startDate = tomorrow.toISOString().split('T')[0];
+    const endDateObj = new Date(tomorrow);
+    endDateObj.setDate(endDateObj.getDate() + 1);
+    const endDate = endDateObj.toISOString().split('T')[0];
+    const referenceCode = `SE-${Date.now().toString(36).toUpperCase()}`;
+
     const { error: resError } = await supabase.from('reservations').insert({
       venue_id: venue.id,
       client_id: clientData.user.id,
-      event_date: tomorrow.toISOString().split('T')[0],
+      reference_code: referenceCode,
+      start_date: startDate,
+      end_date: endDate,
       total_price: 100000,
+      deposit_amount: 33000,
       status: 'PENDING'
     });
     if (resError) console.error('Reservation error:', resError.message);
