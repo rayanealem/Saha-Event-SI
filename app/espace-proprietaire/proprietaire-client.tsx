@@ -327,19 +327,46 @@ export default function EspaceProprietaireClient({
 
         {/* Requests tab */}
         {tab === "requests" && (
-          <div className="flex flex-col gap-4">
-            {initialReservations.filter(r => r.status === 'PENDING').length === 0 ? (
-              <div className="text-center" style={{ padding: "80px 0" }}>
-                <Calendar size={40} strokeWidth={1} style={{ color: "var(--stone)", margin: "0 auto 16px" }} />
-                <p className="text-body" style={{ color: "var(--stone)" }}>
-                  Aucune demande en attente.
-                </p>
+          <div className="flex flex-col gap-8">
+            {/* Nouvelles demandes */}
+            <div>
+              <h3 style={{ color: 'var(--bone)', fontSize: 18, marginBottom: 16 }}>Demandes en attente</h3>
+              <div className="flex flex-col gap-4">
+                {initialReservations.filter(r => r.status === 'PENDING').length === 0 ? (
+                  <div className="text-center" style={{ padding: "40px 0", background: "rgba(255,255,255,0.02)", borderRadius: 6, border: "1px solid rgba(168,124,62,0.1)" }}>
+                    <Calendar size={32} strokeWidth={1} style={{ color: "var(--stone)", margin: "0 auto 12px" }} />
+                    <p className="text-body" style={{ color: "var(--stone)", margin: 0 }}>
+                      Aucune demande en attente.
+                    </p>
+                  </div>
+                ) : (
+                  initialReservations.filter(r => r.status === 'PENDING').map((req) => (
+                    <RequestCard key={req.id} request={req} showActions onUpdateStatus={handleUpdateStatus} />
+                  ))
+                )}
               </div>
-            ) : (
-              initialReservations.filter(r => r.status === 'PENDING').map((req) => (
-                <RequestCard key={req.id} request={req} showActions onUpdateStatus={handleUpdateStatus} />
-              ))
-            )}
+            </div>
+
+            {/* Historique / Validées */}
+            <div>
+              <h3 style={{ color: 'var(--bone)', fontSize: 18, marginBottom: 16 }}>Réservations validées & Historique</h3>
+              <div className="flex flex-col gap-4">
+                {initialReservations.filter(r => r.status === 'CONFIRMED' || r.status === 'COMPLETED' || r.status === 'CANCELLED').length === 0 ? (
+                  <div className="text-center" style={{ padding: "40px 0", background: "rgba(255,255,255,0.02)", borderRadius: 6, border: "1px solid rgba(168,124,62,0.1)" }}>
+                    <p className="text-body" style={{ color: "var(--stone)", margin: 0 }}>
+                      Aucun historique disponible.
+                    </p>
+                  </div>
+                ) : (
+                  initialReservations
+                    .filter(r => r.status === 'CONFIRMED' || r.status === 'COMPLETED' || r.status === 'CANCELLED')
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .map((req) => (
+                      <RequestCard key={req.id} request={req} showActions={false} />
+                    ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -353,6 +380,13 @@ export default function EspaceProprietaireClient({
 }
 
 /* ── Request Card ── */
+const REQUEST_STATUS_MAP: Record<string, { label: string; badge: string; icon: any }> = {
+  PENDING: { label: "En attente", badge: "badge-brass", icon: Clock },
+  CONFIRMED: { label: "Confirmée", badge: "badge-malachite", icon: CheckCircle },
+  COMPLETED: { label: "Terminée", badge: "badge-stone", icon: CheckCircle },
+  CANCELLED: { label: "Annulée", badge: "badge-pomegranate", icon: XCircle },
+};
+
 function RequestCard({
   request,
   showActions = false,
@@ -385,6 +419,9 @@ function RequestCard({
     setLoadingReceipt(false);
   };
 
+  const statusConfig = REQUEST_STATUS_MAP[request.status] || REQUEST_STATUS_MAP.PENDING;
+  const StatusIcon = statusConfig.icon;
+
   return (
     <div
       style={{
@@ -397,9 +434,9 @@ function RequestCard({
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="badge badge-brass">
-              <Clock size={11} strokeWidth={1.5} />
-              En attente
+            <span className={`badge ${statusConfig.badge}`}>
+              <StatusIcon size={11} strokeWidth={1.5} />
+              {statusConfig.label}
             </span>
             <span className="text-mono" style={{ fontSize: 11, color: "var(--stone)" }}>
               {formattedCreated}
