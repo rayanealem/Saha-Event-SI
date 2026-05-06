@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -44,6 +44,25 @@ export default function AjouterSallePage() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [docFileName, setDocFileName] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const combined = [...photoFiles, ...files].slice(0, 5);
+    setPhotoFiles(combined);
+    // Generate previews
+    const previews = combined.map(f => URL.createObjectURL(f));
+    setPhotoPreviews(previews);
+  };
+
+  const removePhoto = (index: number) => {
+    const newFiles = photoFiles.filter((_, i) => i !== index);
+    setPhotoFiles(newFiles);
+    setPhotoPreviews(newFiles.map(f => URL.createObjectURL(f)));
+  };
 
   const toggleAmenity = (a: string) => {
     setSelectedAmenities((prev) =>
@@ -64,7 +83,20 @@ export default function AjouterSallePage() {
       setError('Veuillez joindre un document justificatif (registre commercial, licence, etc.)');
       return;
     }
+
+    // Validate at least 1 photo
+    if (photoFiles.length === 0) {
+      setError('Veuillez ajouter au moins 1 photo de votre salle (maximum 5).');
+      return;
+    }
+
     formData.set("amenities", JSON.stringify(selectedAmenities));
+
+    // Remove default file input photos and add our managed ones
+    formData.delete('venue_photos');
+    photoFiles.forEach((file, i) => {
+      formData.append('venue_photos', file);
+    });
 
     startTransition(async () => {
       const result = await createVenue(formData);
@@ -269,27 +301,66 @@ export default function AjouterSallePage() {
           <div>
             <label className="text-label mb-3 block" style={{ color: "var(--stone)" }}>
               <ImageIcon size={12} strokeWidth={1.5} className="inline mr-1" />
-              Photos (optionnel)
+              Photos de la salle * (1 à 5 photos)
             </label>
             <div
+              onClick={() => photoFiles.length < 5 && photoInputRef.current?.click()}
               style={{
-                padding: "40px 20px",
+                padding: photoFiles.length > 0 ? "20px" : "40px 20px",
                 borderRadius: 6,
                 border: "2px dashed rgba(168,124,62,0.2)",
                 textAlign: "center",
-                cursor: "pointer",
+                cursor: photoFiles.length < 5 ? "pointer" : "default",
                 transition: "border-color 0.2s ease",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(168,124,62,0.4)")}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(168,124,62,0.2)")}
             >
-              <Upload size={24} strokeWidth={1.5} style={{ color: "var(--stone)", margin: "0 auto 12px" }} />
-              <p className="text-caption" style={{ color: "var(--stone)", margin: 0 }}>
-                Glissez vos photos ici ou <span style={{ color: "var(--brass)", textDecoration: "underline" }}>parcourir</span>
-              </p>
-              <p style={{ color: "var(--stone)", fontSize: 11, marginTop: 4, opacity: 0.6 }}>
-                JPEG, PNG · Max 5 Mo chacune
-              </p>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={handlePhotoChange}
+                style={{ display: "none" }}
+              />
+              {photoPreviews.length > 0 ? (
+                <div>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 12 }}>
+                    {photoPreviews.map((src, i) => (
+                      <div key={i} style={{ position: "relative", width: 100, height: 80, borderRadius: 6, overflow: "hidden", border: "1px solid rgba(168,124,62,0.2)" }}>
+                        <img src={src} alt={`Photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
+                          style={{
+                            position: "absolute", top: 2, right: 2,
+                            width: 20, height: 20, borderRadius: "50%",
+                            background: "rgba(139,46,32,0.9)", border: "none",
+                            color: "#fff", fontSize: 12, cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-caption" style={{ color: "var(--stone)", margin: 0 }}>
+                    {photoFiles.length}/5 photos · {photoFiles.length < 5 ? <span style={{ color: "var(--brass)", textDecoration: "underline" }}>Ajouter d&apos;autres</span> : "Maximum atteint"}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Upload size={24} strokeWidth={1.5} style={{ color: "var(--stone)", margin: "0 auto 12px" }} />
+                  <p className="text-caption" style={{ color: "var(--stone)", margin: 0 }}>
+                    Cliquez pour ajouter vos photos ou <span style={{ color: "var(--brass)", textDecoration: "underline" }}>parcourir</span>
+                  </p>
+                  <p style={{ color: "var(--stone)", fontSize: 11, marginTop: 4, opacity: 0.6 }}>
+                    JPEG, PNG, WebP · Max 5 Mo chacune · 1 à 5 photos
+                  </p>
+                </>
+              )}
             </div>
           </div>
 

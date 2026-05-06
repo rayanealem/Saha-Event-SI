@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import EspaceProprietaireClient from "./proprietaire-client";
 import { getOwnerBookings } from "@/app/actions/bookings";
+import { getOwnerDocuments } from "@/app/actions/documents";
 
 export default async function EspaceProprietairePage() {
   const supabase = await createClient();
@@ -29,13 +30,18 @@ export default async function EspaceProprietairePage() {
     .select("id, name, wilaya, status, price_per_day, capacity_max, reservations(id, start_date, end_date, status)")
     .eq("owner_id", user.id);
 
-  // Fetch reservations
-  const { data: reservations } = await getOwnerBookings();
+  // Fetch reservations & documents in parallel
+  const [reservationsResult, documentsResult] = await Promise.all([
+    getOwnerBookings(),
+    getOwnerDocuments(),
+  ]);
 
   return (
     <EspaceProprietaireClient 
       initialVenues={venues || []} 
-      initialReservations={reservations || []} 
+      initialReservations={reservationsResult.data || []} 
+      initialDocuments={documentsResult.data || []}
+      userId={user.id}
     />
   );
 }

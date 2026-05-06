@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { updateBookingStatus, toggleBlockedDate } from "@/app/actions/bookings";
-import { getSignedReceiptUrl } from "@/app/actions/documents";
+import { getSignedReceiptUrl, uploadKYCDocument, getSignedKYCUrl } from "@/app/actions/documents";
 import { BookingCalendar } from "@/components/venue/booking-calendar";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -28,6 +28,9 @@ import {
   FileText,
   ExternalLink,
   Image,
+  Download,
+  Shield,
+  UploadCloud,
 } from "lucide-react";
 
 const VENUE_STATUS_MAP: Record<string, { label: string; badge: string }> = {
@@ -38,14 +41,35 @@ const VENUE_STATUS_MAP: Record<string, { label: string; badge: string }> = {
   REJECTED: { label: "Rejetée", badge: "badge-pomegranate" },
 };
 
-type Tab = "overview" | "venues" | "requests";
+type Tab = "overview" | "venues" | "requests" | "documents";
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  CIN_RECTO: "Carte d'identité (Recto)",
+  CIN_VERSO: "Carte d'identité (Verso)",
+  SELFIE: "Selfie avec pièce d'identité",
+  ACTE: "Acte de propriété",
+  CONTRAT: "Contrat de location",
+  AUTORISATION: "Autorisation d'exploitation",
+  REGISTRE: "Registre du commerce",
+  AUTRE: "Autre document",
+};
+
+const DOC_STATUS_LABELS: Record<string, { label: string; badge: string }> = {
+  PENDING: { label: "En attente", badge: "badge-brass" },
+  APPROVED: { label: "Approuvé", badge: "badge-malachite" },
+  REJECTED: { label: "Rejeté", badge: "badge-pomegranate" },
+};
 
 export default function EspaceProprietaireClient({ 
   initialVenues, 
-  initialReservations 
+  initialReservations,
+  initialDocuments,
+  userId,
 }: { 
   initialVenues: any[], 
-  initialReservations: any[] 
+  initialReservations: any[],
+  initialDocuments: any[],
+  userId: string,
 }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [isPending, startTransition] = useTransition();
@@ -109,6 +133,7 @@ export default function EspaceProprietaireClient({
               { key: "overview", label: "Vue d'ensemble", icon: BarChart3 },
               { key: "venues", label: "Mes salles", icon: Building2 },
               { key: "requests", label: "Demandes", icon: Calendar, count: OWNER_STATS.pending_requests },
+              { key: "documents", label: "Documents KYC", icon: Shield },
             ] as const
           ).map(({ key, label, icon: Icon, ...rest }) => (
             <button
@@ -314,6 +339,11 @@ export default function EspaceProprietaireClient({
             )}
           </div>
         )}
+
+        {/* Documents KYC tab */}
+        {tab === "documents" && (
+          <DocumentsTab initialDocuments={initialDocuments} userId={userId} />
+        )}
       </div>
     </section>
   );
@@ -478,6 +508,185 @@ function RequestCard({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── Documents KYC Tab ── */
+function DocumentsTab({ initialDocuments, userId }: { initialDocuments: any[], userId: string }) {
+  const [documents] = useState(initialDocuments);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewDocId, setPreviewDocId] = useState<string | null>(null);
+
+  const IDENTITY_DOCS = ['CIN_RECTO', 'CIN_VERSO', 'SELFIE'];
+  const VENUE_DOCS = ['REGISTRE', 'CONTRAT', 'ACTE', 'AUTORISATION', 'AUTRE'];
+
+  const handleUpload = async (docType: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Le fichier ne doit pas dépasser 5 Mo.');
+      return;
+    }
+    setUploading(docType);
+    setError(null);
+    setSuccess(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    const result = await uploadKYCDocument(docType, formData);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccess(`${DOC_TYPE_LABELS[docType] || docType} téléversé avec succès.`);
+      window.location.reload();
+    }
+    setUploading(null);
+  };
+
+  const handlePreview = async (doc: any) => {
+    if (previewDocId === doc.id) {
+      setPreviewUrl(null);
+      setPreviewDocId(null);
+      return;
+    }
+    const result = await getSignedKYCUrl(doc.url);
+    if (result.url) {
+      setPreviewUrl(result.url);
+      setPreviewDocId(doc.id);
+    }
+  };
+
+  const getExistingDoc = (docType: string) => documents.find((d: any) => d.doc_type === docType);
+
+  return (
+    <div>
+      {error && (
+        <div style={{ padding: '12px 16px', marginBottom: 16, borderRadius: 6, background: 'rgba(139,46,32,0.1)', border: '1px solid rgba(139,46,32,0.2)', color: 'var(--pomegranate)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div style={{ padding: '12px 16px', marginBottom: 16, borderRadius: 6, background: 'rgba(72,121,54,0.1)', border: '1px solid rgba(72,121,54,0.2)', color: 'var(--malachite)', fontSize: 13 }}>
+          {success}
+        </div>
+      )}
+
+      {/* Identity Documents */}
+      <div style={{ marginBottom: 32 }}>
+        <h3 style={{ color: 'var(--bone)', fontSize: 16, marginBottom: 16 }}>
+          <Shield size={16} strokeWidth={1.5} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle', color: 'var(--brass)' }} />
+          Vérification d&apos;identité
+        </h3>
+        <p style={{ color: 'var(--stone)', fontSize: 13, marginBottom: 20, opacity: 0.8 }}>
+          Téléversez votre carte d&apos;identité nationale (recto et verso) ainsi qu&apos;un selfie pour vérification.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {IDENTITY_DOCS.map(docType => {
+            const existing = getExistingDoc(docType);
+            const sc = existing ? DOC_STATUS_LABELS[existing.status] || DOC_STATUS_LABELS.PENDING : null;
+            return (
+              <div key={docType} style={{ padding: 20, borderRadius: 6, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(168,124,62,0.1)' }}>
+                <p style={{ color: 'var(--bone)', fontSize: 13, fontWeight: 500, marginBottom: 8 }}>{DOC_TYPE_LABELS[docType]}</p>
+                {existing ? (
+                  <div>
+                    <span className={`badge ${sc?.badge}`} style={{ marginBottom: 8, display: 'inline-block' }}>{sc?.label}</span>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => handlePreview(existing)} className="btn-ghost" style={{ color: 'var(--brass)', height: 30, fontSize: 11 }}>
+                        <Eye size={12} strokeWidth={1.5} />
+                        {previewDocId === existing.id ? 'Masquer' : 'Aperçu'}
+                      </button>
+                    </div>
+                    {previewDocId === existing.id && previewUrl && (
+                      <div style={{ marginTop: 12 }}>
+                        <img src={previewUrl} alt={DOC_TYPE_LABELS[docType]} style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4, border: '1px solid rgba(168,124,62,0.1)' }} />
+                        <a href={previewUrl} download className="btn-ghost no-underline block mt-2" style={{ color: 'var(--stone)', fontSize: 11 }}>
+                          <Download size={12} strokeWidth={1.5} /> Télécharger
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <label style={{ cursor: uploading === docType ? 'wait' : 'pointer', display: 'block' }}>
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => handleUpload(docType, e)} style={{ display: 'none' }} disabled={!!uploading} />
+                    <div style={{ padding: 16, borderRadius: 4, border: '2px dashed rgba(168,124,62,0.2)', textAlign: 'center' }}>
+                      {uploading === docType ? (
+                        <p style={{ color: 'var(--brass)', fontSize: 12, margin: 0 }}>Téléversement...</p>
+                      ) : (
+                        <>
+                          <UploadCloud size={20} strokeWidth={1.5} style={{ color: 'var(--stone)', margin: '0 auto 8px', display: 'block' }} />
+                          <p style={{ color: 'var(--stone)', fontSize: 11, margin: 0 }}>Cliquez pour téléverser</p>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Venue Ownership Documents */}
+      <div>
+        <h3 style={{ color: 'var(--bone)', fontSize: 16, marginBottom: 16 }}>
+          <FileText size={16} strokeWidth={1.5} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle', color: 'var(--brass)' }} />
+          Justificatifs de propriété / exploitation
+        </h3>
+        <p style={{ color: 'var(--stone)', fontSize: 13, marginBottom: 20, opacity: 0.8 }}>
+          Soumettez les documents prouvant votre droit d&apos;exploiter vos salles.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {VENUE_DOCS.map(docType => {
+            const existing = getExistingDoc(docType);
+            const sc = existing ? DOC_STATUS_LABELS[existing.status] || DOC_STATUS_LABELS.PENDING : null;
+            return (
+              <div key={docType} style={{ padding: 20, borderRadius: 6, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(168,124,62,0.1)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <p style={{ color: 'var(--bone)', fontSize: 13, fontWeight: 500, margin: 0 }}>{DOC_TYPE_LABELS[docType]}</p>
+                  {existing && <span className={`badge ${sc?.badge}`}>{sc?.label}</span>}
+                </div>
+                {existing ? (
+                  <div>
+                    <p style={{ color: 'var(--stone)', fontSize: 11, margin: '4px 0 8px' }}>
+                      Soumis le {new Date(existing.created_at).toLocaleDateString('fr-FR')}
+                      {existing.venues?.name && ` · ${existing.venues.name}`}
+                    </p>
+                    <button onClick={() => handlePreview(existing)} className="btn-ghost" style={{ color: 'var(--brass)', height: 28, fontSize: 11 }}>
+                      <Eye size={12} strokeWidth={1.5} />
+                      {previewDocId === existing.id ? 'Masquer' : 'Aperçu'}
+                    </button>
+                    {previewDocId === existing.id && previewUrl && (
+                      <div style={{ marginTop: 12 }}>
+                        <img src={previewUrl} alt={DOC_TYPE_LABELS[docType]} style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4, border: '1px solid rgba(168,124,62,0.1)' }} />
+                        <a href={previewUrl} download className="btn-ghost no-underline block mt-2" style={{ color: 'var(--stone)', fontSize: 11 }}>
+                          <Download size={12} strokeWidth={1.5} /> Télécharger
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <label style={{ cursor: uploading === docType ? 'wait' : 'pointer', display: 'block', marginTop: 8 }}>
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => handleUpload(docType, e)} style={{ display: 'none' }} disabled={!!uploading} />
+                    <div style={{ padding: 12, borderRadius: 4, border: '2px dashed rgba(168,124,62,0.2)', textAlign: 'center' }}>
+                      {uploading === docType ? (
+                        <p style={{ color: 'var(--brass)', fontSize: 12, margin: 0 }}>Téléversement...</p>
+                      ) : (
+                        <p style={{ color: 'var(--stone)', fontSize: 11, margin: 0 }}>
+                          <UploadCloud size={14} strokeWidth={1.5} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                          Cliquez pour téléverser
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

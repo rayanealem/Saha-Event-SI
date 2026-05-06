@@ -122,3 +122,32 @@ export async function getSignedReceiptUrl(filePath: string) {
   if (error) return { url: null, error: error.message }
   return { url: data.signedUrl, error: null }
 }
+
+export async function getOwnerDocuments() {
+  const supabase = (await createClient()) as any
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: [], error: 'Unauthorized' }
+
+  const { data, error } = await supabase
+    .from('venue_documents')
+    .select('*, venues(name)')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) return { data: [], error: error.message }
+  return { data: data || [], error: null }
+}
+
+export async function getSignedKYCUrl(filePath: string) {
+  const supabase = (await createClient()) as any
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { url: null, error: 'Unauthorized' }
+
+  const { data, error } = await supabase.storage
+    .from('kyc_documents')
+    .createSignedUrl(filePath, 300) // 5 minute expiry
+
+  if (error) return { url: null, error: error.message }
+  return { url: data.signedUrl, error: null }
+}

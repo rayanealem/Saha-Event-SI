@@ -85,6 +85,37 @@ export async function createVenue(formData: FormData) {
     return { error: error.message }
   }
 
+  // Upload venue photos (1-5 images)
+  const photoFiles = formData.getAll('venue_photos') as File[]
+  for (let i = 0; i < photoFiles.length; i++) {
+    const photo = photoFiles[i]
+    if (!photo || photo.size === 0) continue
+    if (photo.size > 5 * 1024 * 1024) continue // skip files > 5MB
+
+    const photoExt = photo.name.split('.').pop()
+    const photoName = `venue-${data.id}-${i}-${Date.now()}.${photoExt}`
+    const photoPath = `venues/${data.id}/${photoName}`
+
+    const { error: photoUploadError } = await supabase.storage
+      .from('public_images')
+      .upload(photoPath, photo)
+
+    if (!photoUploadError) {
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('public_images')
+        .getPublicUrl(photoPath)
+
+      if (urlData?.publicUrl) {
+        await supabase.from('venue_photos').insert({
+          venue_id: data.id,
+          url: urlData.publicUrl,
+          display_order: i,
+        })
+      }
+    }
+  }
+
   // Upload venue document if provided
   const docFile = formData.get('venue_document') as File
   if (docFile && docFile.size > 0) {
