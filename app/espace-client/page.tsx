@@ -2,6 +2,8 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { EspaceClientContent } from "./client-content";
 
+export const dynamic = "force-dynamic";
+
 export default async function EspaceClientPage() {
   const supabase = (await createClient()) as any;
   const {

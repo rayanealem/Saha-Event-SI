@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 
@@ -140,20 +141,25 @@ export async function createVenue(formData: FormData) {
   }
 
   // Notify admins about the new venue submission
-  const { data: admins } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('role', 'ADMIN')
-  
-  if (admins && admins.length > 0) {
-    for (const admin of admins) {
-      await createNotification(
-        admin.id,
-        'new_document',
-        `Nouvelle salle "${venueData.name}" soumise pour vérification par un propriétaire.`,
-        data.id
-      )
+  try {
+    const adminSupabase = createAdminClient()
+    const { data: admins } = await adminSupabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'ADMIN')
+    
+    if (admins && admins.length > 0) {
+      for (const admin of admins) {
+        await createNotification(
+          admin.id,
+          'new_document',
+          `Nouvelle salle "${venueData.name}" soumise pour vérification par un propriétaire.`,
+          data.id
+        )
+      }
     }
+  } catch (err) {
+    console.error('Failed to notify admins (possibly missing SUPABASE_SERVICE_ROLE_KEY):', err)
   }
 
   revalidatePath('/espace-proprietaire')

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 // ── Paginated fetch for the /notifications page ──
@@ -116,21 +117,25 @@ export async function createNotification(
   message: string,
   relatedId?: string
 ) {
-  const supabase = (await createClient()) as any
+  try {
+    const adminSupabase = createAdminClient()
 
-  const title = NOTIFICATION_TITLES[type] || 'Notification'
+    const title = NOTIFICATION_TITLES[type] || 'Notification'
 
-  const { error } = await supabase
-    .from('notifications')
-    .insert({
-      user_id: userId,
-      type,
-      title,
-      message,
-      related_id: relatedId,
-    })
+    const { error } = await adminSupabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type,
+        title,
+        message,
+        related_id: relatedId,
+      })
 
-  if (error) {
-    console.error('Failed to create notification:', error)
+    if (error) {
+      console.error('Failed to create notification:', error)
+    }
+  } catch (err) {
+    console.error('Failed to create notification (possibly missing SUPABASE_SERVICE_ROLE_KEY):', err)
   }
 }

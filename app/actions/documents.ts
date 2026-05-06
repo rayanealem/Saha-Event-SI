@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 
@@ -105,7 +106,36 @@ export async function uploadKYCDocument(docType: string, formData: FormData) {
   // Update profile status
   await supabase.from('profiles').update({ kyc_status: 'PENDING' }).eq('id', user.id)
 
+  // Notify admins about the new KYC document
+  try {
+    const adminSupabase = createAdminClient()
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+    const ownerName = (ownerProfile as any)?.full_name || 'Un propriétaire'
+
+    const { data: admins } = await adminSupabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'ADMIN')
+
+    if (admins && admins.length > 0) {
+      for (const admin of admins as any[]) {
+        await createNotification(
+          admin.id,
+          'new_document',
+          `${ownerName} a soumis un document KYC (${docType}). Vérification requise.`
+        )
+      }
+    }
+  } catch (err) {
+    console.error('Failed to notify admins about KYC upload:', err)
+  }
+
   revalidatePath('/verification')
+  revalidatePath('/admin')
   return { success: true }
 }
 

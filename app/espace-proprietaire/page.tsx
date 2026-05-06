@@ -4,6 +4,8 @@ import EspaceProprietaireClient from "./proprietaire-client";
 import { getOwnerBookings } from "@/app/actions/bookings";
 import { getOwnerDocuments } from "@/app/actions/documents";
 
+export const dynamic = "force-dynamic";
+
 export default async function EspaceProprietairePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

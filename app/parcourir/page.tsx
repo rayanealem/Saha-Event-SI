@@ -1,6 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
 import { BrowseClient } from "@/components/browse-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function ParcourirPage() {
   const supabase = await createClient();
 

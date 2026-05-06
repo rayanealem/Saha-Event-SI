@@ -24,10 +24,12 @@ export function NotificationsDropdown() {
 
   useEffect(() => {
     const supabase = createClient();
+    let userId: string | null = null;
 
     const fetchNotifications = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      userId = user.id;
 
       const { data } = await supabase
         .from("notifications")
@@ -44,22 +46,39 @@ export function NotificationsDropdown() {
 
     fetchNotifications();
 
-    // Realtime subscription
-    const channel = supabase
-      .channel("notifications")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications" },
-        (payload) => {
-          const newNotif = payload.new as Notification;
-          setNotifications((prev) => [newNotif, ...prev].slice(0, 15));
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .subscribe();
+    // Realtime subscription — filtered by current user_id
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const channel = supabase
+        .channel(`notifications-dropdown-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotif = payload.new as Notification;
+            setNotifications((prev) => [newNotif, ...prev].slice(0, 15));
+            setUnreadCount((prev) => prev + 1);
+          }
+        )
+        .subscribe();
+
+      return channel;
+    };
+
+    let channelRef: any = null;
+    setupRealtime().then((ch) => { channelRef = ch; });
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef) {
+        supabase.removeChannel(channelRef);
+      }
     };
   }, []);
 

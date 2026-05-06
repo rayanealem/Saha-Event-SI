@@ -1,9 +1,8 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { updateBookingStatus, toggleBlockedDate } from "@/app/actions/bookings";
 import { getSignedReceiptUrl, uploadKYCDocument, getSignedKYCUrl } from "@/app/actions/documents";
 import { BookingCalendar } from "@/components/venue/booking-calendar";
@@ -89,9 +88,12 @@ export default function EspaceProprietaireClient({
     pending_requests: pendingRequests,
   };
 
+  const router = useRouter();
+
   const handleUpdateStatus = (id: string, status: 'CONFIRMED' | 'CANCELLED') => {
     startTransition(async () => {
       await updateBookingStatus(id, status);
+      router.refresh();
     });
   };
 
@@ -99,6 +101,7 @@ export default function EspaceProprietaireClient({
     const dateStr = format(date, 'yyyy-MM-dd');
     startTransition(async () => {
       await toggleBlockedDate(venueId, dateStr);
+      router.refresh();
     });
   };
 

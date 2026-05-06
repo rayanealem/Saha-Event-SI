@@ -65,25 +65,40 @@ export function NotificationsPageClient({
   // ── Realtime subscription ──
   useEffect(() => {
     const supabase = createClient();
+    let channelRef: any = null;
 
-    const channel = supabase
-      .channel("notifications-page")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications" },
-        (payload) => {
-          const newNotif = payload.new as Notification;
-          if (filter !== "read") {
-            setNotifications((prev) => [newNotif, ...prev]);
-            setTotal((prev) => prev + 1);
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      channelRef = supabase
+        .channel(`notifications-page-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotif = payload.new as Notification;
+            if (filter !== "read") {
+              setNotifications((prev) => [newNotif, ...prev]);
+              setTotal((prev) => prev + 1);
+            }
+            setUnreadCount((prev) => prev + 1);
           }
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    };
+
+    setupRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef) {
+        supabase.removeChannel(channelRef);
+      }
     };
   }, [filter]);
 

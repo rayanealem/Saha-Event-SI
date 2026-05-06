@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 
@@ -77,20 +78,25 @@ export async function createBooking(data: {
     )
 
     // Also notify all admins about new platform bookings
-    const { data: admins } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('role', 'ADMIN')
-    
-    if (admins && admins.length > 0) {
-      for (const admin of admins as any[]) {
-        await createNotification(
-          admin.id,
-          'booking_request',
-          `Nouvelle commande : ${clientName} → "${(venue as any).name}" le ${formattedDate}. Montant: ${data.total_price.toLocaleString('fr-DZ')} DA.`,
-          reservation.id
-        )
+    try {
+      const adminSupabase = createAdminClient()
+      const { data: admins } = await adminSupabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'ADMIN')
+      
+      if (admins && admins.length > 0) {
+        for (const admin of admins as any[]) {
+          await createNotification(
+            admin.id,
+            'booking_request',
+            `Nouvelle commande : ${clientName} → "${(venue as any).name}" le ${formattedDate}. Montant: ${data.total_price.toLocaleString('fr-DZ')} DA.`,
+            reservation.id
+          )
+        }
       }
+    } catch (err) {
+      console.error('Failed to notify admins about booking:', err)
     }
   }
 
@@ -155,10 +161,34 @@ export async function updateBookingStatus(id: string, status: 'CONFIRMED' | 'CAN
         id
       )
     }
+
+    // Notify admins about booking status changes
+    try {
+      const adminSupabase = createAdminClient()
+      const { data: admins } = await adminSupabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'ADMIN')
+
+      if (admins && admins.length > 0) {
+        const statusLabel = status === 'CONFIRMED' ? 'confirmée' : status === 'CANCELLED' ? 'refusée' : 'reçu invalide'
+        for (const admin of admins as any[]) {
+          await createNotification(
+            admin.id,
+            status === 'CONFIRMED' ? 'booking_confirmed' : 'booking_refused',
+            `Réservation ${statusLabel} : "${venueName}" le ${formattedDate}.`,
+            id
+          )
+        }
+      }
+    } catch (err) {
+      console.error('Failed to notify admins about booking status change:', err)
+    }
   }
 
   revalidatePath('/espace-proprietaire')
   revalidatePath('/espace-client')
+  revalidatePath('/admin')
   return { success: true }
 }
 

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 
@@ -41,12 +42,17 @@ export async function updateKYCStatus(profileId: string, status: 'APPROVED' | 'R
     updatePayload.kyc_rejection_reason = reason
   }
 
-  const { error } = await (supabase as any)
-    .from('profiles')
-    .update(updatePayload)
-    .eq('id', profileId)
+  try {
+    const adminSupabase = createAdminClient()
+    const { error } = await adminSupabase
+      .from('profiles')
+      .update(updatePayload)
+      .eq('id', profileId)
 
-  if (error) return { error: error.message }
+    if (error) return { error: error.message }
+  } catch (err: any) {
+    return { error: err.message || 'Failed to initialize admin client' }
+  }
 
   // Notify the user
   if (status === 'APPROVED') {
@@ -76,15 +82,16 @@ export async function updateVenueStatus(venueId: string, status: 'PUBLISHED' | '
   const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if ((adminProfile as any)?.role !== 'ADMIN') return { error: 'Forbidden' }
 
-  const { error } = await supabase
+  const adminSupabase = createAdminClient()
+  const { error } = await adminSupabase
     .from('venues')
     .update({ status })
     .eq('id', venueId)
 
   if (error) return { error: error.message }
 
-  // Get the venue to notify its owner
-  const { data: venue } = await supabase
+  // Get the venue to notify its owner (use admin client to bypass RLS)
+  const { data: venue } = await adminSupabase
     .from('venues')
     .select('name, owner_id')
     .eq('id', venueId)
@@ -110,12 +117,12 @@ export async function updateVenueStatus(venueId: string, status: 'PUBLISHED' | '
 
   // Also update venue documents status
   if (status === 'PUBLISHED') {
-    await supabase
+    await adminSupabase
       .from('venue_documents')
       .update({ status: 'APPROVED' })
       .eq('venue_id', venueId)
   } else if (status === 'REJECTED') {
-    await supabase
+    await adminSupabase
       .from('venue_documents')
       .update({ status: 'REJECTED', note: reason || null })
       .eq('venue_id', venueId)
@@ -124,6 +131,7 @@ export async function updateVenueStatus(venueId: string, status: 'PUBLISHED' | '
   revalidatePath('/admin')
   revalidatePath('/espace-proprietaire')
   revalidatePath('/parcourir')
+  revalidatePath(`/salle/${venueId}`)
   return { success: true }
 }
 
