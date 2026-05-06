@@ -31,12 +31,16 @@ export function NotificationsDropdown() {
       if (!user) return;
       userId = user.id;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("notifications")
         .select("id, title, message, type, is_read, created_at, link")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(15);
+
+      if (error) {
+        console.error("[NotificationsDropdown] fetch error:", error);
+      }
 
       if (data) {
         setNotifications(data);

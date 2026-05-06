@@ -27,29 +27,27 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Protect dashboard routes AND reservation flow
+  // IMPORTANT: Always refresh the session so auth cookies stay valid.
+  // This must happen before any route checks.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Protect dashboard routes, admin, notifications AND reservation flow
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith('/espace-') ||
-    request.nextUrl.pathname.startsWith('/reservation')
+    request.nextUrl.pathname.startsWith('/reservation') ||
+    request.nextUrl.pathname.startsWith('/admin') ||
+    request.nextUrl.pathname.startsWith('/notifications') ||
+    request.nextUrl.pathname.startsWith('/ajouter-salle')
 
-  if (isProtectedRoute) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      url.searchParams.set('mode', 'register')
-      url.searchParams.set('redirect_to', request.nextUrl.pathname)
-      return NextResponse.redirect(url)
-    }
+  if (isProtectedRoute && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('mode', 'register')
+    url.searchParams.set('redirect_to', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
   }
-
-  // Handle authenticated routing: Role checks
-  // Note: we fetch the profile from supabase using the anon key.
-  // We can do this here or inside the layout.
-  // It's probably better to do role checks in layouts/components, or here if we have a simple check.
 
   return supabaseResponse
 }
